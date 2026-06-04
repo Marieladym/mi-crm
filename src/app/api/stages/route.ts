@@ -5,7 +5,7 @@ import { asc } from "drizzle-orm";
 
 // POST: crear una nueva etapa
 export async function POST(request: NextRequest) {
-  let body: { name?: string; color?: string };
+  let body: { name?: string; color?: string; pipelineId?: string };
   try {
     body = await request.json();
   } catch {
@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       color: body.color || "#64748b",
       isWon: false,
       isLost: false,
+      pipelineId: body.pipelineId || null,
     })
     .returning()
     .get();

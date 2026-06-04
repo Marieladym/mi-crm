@@ -1,17 +1,37 @@
 import { db } from "@/db";
-import { pipelineStages, deals, contacts } from "@/db/schema";
+import { pipelineStages, deals, contacts, pipelines } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { KanbanBoard } from "@/components/pipeline/KanbanBoard";
+import { PipelineSwitcher } from "@/components/pipeline/PipelineSwitcher";
 import type { PipelineColumn } from "@/types";
 
 export const dynamic = "force-dynamic";
 
-export default function PipelinePage() {
+export default async function PipelinePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pipeline?: string }>;
+}) {
+  const { pipeline: pipelineParam } = await searchParams;
+
+  const allPipelines = db
+    .select()
+    .from(pipelines)
+    .orderBy(asc(pipelines.createdAt))
+    .all();
+
+  // Pipeline seleccionado: el del parámetro, o el por defecto, o el primero
+  const selected =
+    allPipelines.find((p) => p.id === pipelineParam) ||
+    allPipelines.find((p) => p.isDefault) ||
+    allPipelines[0];
+
   const stages = db
     .select()
     .from(pipelineStages)
     .orderBy(asc(pipelineStages.order))
-    .all();
+    .all()
+    .filter((s) => !selected || s.pipelineId === selected.id);
 
   const allDeals = db
     .select({
@@ -61,7 +81,18 @@ export default function PipelinePage() {
         </p>
       </div>
 
-      <KanbanBoard initialColumns={columns} />
+      <PipelineSwitcher
+        pipelines={allPipelines.map((p) => ({ id: p.id, name: p.name }))}
+        selectedId={selected?.id ?? null}
+      />
+
+      {columns.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Este pipeline no tiene etapas. Agrégalas en Personalizar.
+        </p>
+      ) : (
+        <KanbanBoard initialColumns={columns} />
+      )}
     </div>
   );
 }

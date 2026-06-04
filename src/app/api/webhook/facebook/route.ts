@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { contacts, activities, crmSettings, deals, pipelineStages } from "@/db/schema";
+import { contacts, activities, crmSettings, deals, pipelineStages, pipelines } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 
 // GET: Facebook verifica que el webhook es tuyo
@@ -193,15 +193,45 @@ export async function POST(request: NextRequest) {
       })
       .run();
 
-    // Crear automáticamente un deal en la etapa "Prospecto" (o la primera)
+    // Crear automáticamente un deal en la etapa "Prospecto" del pipeline asignado
     let dealId: string | null = null;
     const allStages = db
       .select()
       .from(pipelineStages)
       .orderBy(asc(pipelineStages.order))
       .all();
+
+    // ¿A qué pipeline va este formulario?
+    let targetPipelineId: string | null = null;
+    if (formId) {
+      const fpSetting = db
+        .select()
+        .from(crmSettings)
+        .where(eq(crmSettings.key, "form_pipelines"))
+        .get();
+      if (fpSetting) {
+        const map: Record<string, string> = JSON.parse(fpSetting.value);
+        targetPipelineId = map[formId] || null;
+      }
+    }
+    // Si no hay asignación, usar el pipeline por defecto
+    if (!targetPipelineId) {
+      const def = db
+        .select()
+        .from(pipelines)
+        .where(eq(pipelines.isDefault, true))
+        .get();
+      targetPipelineId = def?.id || null;
+    }
+
+    const stagesOfPipeline = targetPipelineId
+      ? allStages.filter((s) => s.pipelineId === targetPipelineId)
+      : allStages;
     const prospectStage =
-      allStages.find((s) => /prospecto/i.test(s.name)) || allStages[0];
+      stagesOfPipeline.find((s) => /prospecto/i.test(s.name)) ||
+      stagesOfPipeline.find((s) => !s.isWon && !s.isLost) ||
+      stagesOfPipeline[0] ||
+      allStages[0];
 
     if (prospectStage) {
       const deal = db

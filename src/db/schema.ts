@@ -21,6 +21,17 @@ export const contacts = sqliteTable("contacts", {
     .$defaultFn(() => new Date()),
 });
 
+export const pipelines = sqliteTable("pipelines", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull(),
+  isDefault: integer("is_default", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 export const pipelineStages = sqliteTable("pipeline_stages", {
   id: text("id")
     .primaryKey()
@@ -30,6 +41,7 @@ export const pipelineStages = sqliteTable("pipeline_stages", {
   color: text("color").notNull().default("#64748b"),
   isWon: integer("is_won", { mode: "boolean" }).notNull().default(false),
   isLost: integer("is_lost", { mode: "boolean" }).notNull().default(false),
+  pipelineId: text("pipeline_id"),
 });
 
 export const deals = sqliteTable("deals", {

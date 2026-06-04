@@ -48,22 +48,31 @@ function questionIcon(q: Question) {
   return HelpCircle;
 }
 
+type Pipeline = { id: string; name: string };
+
 export function FormsExplorer() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [forms, setForms] = useState<Form[]>([]);
   const [enabled, setEnabled] = useState<Set<string>>(new Set());
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
+  const [formPipelines, setFormPipelines] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/forms");
+      const [res, pls] = await Promise.all([
+        fetch("/api/forms"),
+        fetch("/api/pipelines").then((r) => r.json()),
+      ]);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al cargar");
       setForms(data.forms);
       setEnabled(new Set(data.enabledIds));
+      setFormPipelines(data.formPipelines || {});
+      setPipelines(Array.isArray(pls) ? pls : []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error desconocido");
     } finally {
@@ -90,7 +99,7 @@ export function FormsExplorer() {
       const res = await fetch("/api/forms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabledIds: Array.from(enabled) }),
+        body: JSON.stringify({ enabledIds: Array.from(enabled), formPipelines }),
       });
       if (!res.ok) throw new Error("Error al guardar");
       toast.success("Formularios guardados");
@@ -178,6 +187,31 @@ export function FormsExplorer() {
                   </Button>
                 </CardHeader>
                 <CardContent>
+                  {/* Asignar pipeline */}
+                  {pipelines.length > 0 && (
+                    <div className="flex items-center gap-2 mb-3 pb-3 border-b">
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        Guardar leads en:
+                      </span>
+                      <select
+                        value={formPipelines[form.id] || ""}
+                        onChange={(e) =>
+                          setFormPipelines((prev) => ({
+                            ...prev,
+                            [form.id]: e.target.value,
+                          }))
+                        }
+                        className="h-8 rounded-md border bg-transparent px-2 text-sm cursor-pointer"
+                      >
+                        <option value="">Pipeline principal (por defecto)</option>
+                        {pipelines.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <p className="text-xs text-muted-foreground mb-2">
                     {form.questions.length} preguntas:
                   </p>

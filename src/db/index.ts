@@ -88,6 +88,12 @@ function initTables(db: Database.Database): void {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     )`,
+    `CREATE TABLE IF NOT EXISTS pipelines (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      is_default INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    )`,
   ];
 
   for (const sql of tables) {
@@ -99,13 +105,38 @@ function initTables(db: Database.Database): void {
   }
 
   // Migraciones para bases de datos existentes (agregar columnas nuevas)
-  const migrations = [`ALTER TABLE contacts ADD COLUMN form_data TEXT`];
+  const migrations = [
+    `ALTER TABLE contacts ADD COLUMN form_data TEXT`,
+    `ALTER TABLE pipeline_stages ADD COLUMN pipeline_id TEXT`,
+  ];
   for (const sql of migrations) {
     try {
       db.exec(sql);
     } catch {
       // La columna ya existe - seguro continuar
     }
+  }
+
+  // Asegurar un pipeline por defecto y asignar etapas huérfanas a él
+  try {
+    let def = db
+      .prepare("SELECT id FROM pipelines WHERE is_default = 1 LIMIT 1")
+      .get() as { id: string } | undefined;
+
+    if (!def) {
+      const id = crypto.randomUUID();
+      db.prepare(
+        "INSERT INTO pipelines (id, name, is_default, created_at) VALUES (?, ?, 1, ?)"
+      ).run(id, "Pipeline principal", Date.now());
+      def = { id };
+    }
+
+    // Etapas sin pipeline -> al pipeline por defecto
+    db.prepare(
+      "UPDATE pipeline_stages SET pipeline_id = ? WHERE pipeline_id IS NULL"
+    ).run(def.id);
+  } catch {
+    // Si falla, no bloquear el arranque
   }
 }
 

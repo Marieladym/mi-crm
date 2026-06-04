@@ -3,12 +3,19 @@ import { db } from "@/db";
 import { pipelineStages, deals, contacts } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 
-export async function GET() {
-  const stages = db
+export async function GET(request: NextRequest) {
+  const pipelineId = new URL(request.url).searchParams.get("pipelineId");
+
+  const allStages = db
     .select()
     .from(pipelineStages)
     .orderBy(asc(pipelineStages.order))
     .all();
+
+  // Si se pide un pipeline específico, filtrar; si no, devolver todas las etapas
+  const stages = pipelineId
+    ? allStages.filter((s) => s.pipelineId === pipelineId)
+    : allStages;
 
   const allDeals = db
     .select({

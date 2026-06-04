@@ -97,10 +97,21 @@ export async function GET() {
       ? JSON.parse(enabledSetting.value)
       : [];
 
+    // Mapeo formulario -> pipeline
+    const fpSetting = db
+      .select()
+      .from(crmSettings)
+      .where(eq(crmSettings.key, "form_pipelines"))
+      .get();
+    const formPipelines: Record<string, string> = fpSetting
+      ? JSON.parse(fpSetting.value)
+      : {};
+
     return NextResponse.json({
       pages: pages.map((p) => ({ id: p.id, name: p.name })),
       forms,
       enabledIds,
+      formPipelines,
       total: forms.length,
     });
   } catch (error) {
@@ -111,9 +122,9 @@ export async function GET() {
   }
 }
 
-// POST: guardar qué formularios usa el CRM
+// POST: guardar qué formularios usa el CRM y a qué pipeline va cada uno
 export async function POST(request: NextRequest) {
-  let body: { enabledIds?: string[] };
+  let body: { enabledIds?: string[]; formPipelines?: Record<string, string> };
   try {
     body = await request.json();
   } catch {
@@ -129,6 +140,16 @@ export async function POST(request: NextRequest) {
       set: { value: JSON.stringify(enabledIds) },
     })
     .run();
+
+  if (body.formPipelines && typeof body.formPipelines === "object") {
+    db.insert(crmSettings)
+      .values({ key: "form_pipelines", value: JSON.stringify(body.formPipelines) })
+      .onConflictDoUpdate({
+        target: crmSettings.key,
+        set: { value: JSON.stringify(body.formPipelines) },
+      })
+      .run();
+  }
 
   return NextResponse.json({ success: true, enabledIds });
 }
