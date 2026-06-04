@@ -36,22 +36,30 @@ const dealSchema = z.object({
 
 type DealFormData = z.infer<typeof dealSchema>;
 
+interface DealInitialData {
+  id: string;
+  title: string;
+  value: number; // en centavos
+  stageId: string;
+  contactId: string;
+  probability: number;
+  expectedClose: string;
+  notes: string;
+}
+
 interface DealFormProps {
   open: boolean;
   onClose: () => void;
+  initialData?: DealInitialData;
+  presetContactId?: string;
+  presetTitle?: string;
 }
 
-export function DealForm({ open, onClose }: DealFormProps) {
+export function DealForm({ open, onClose, initialData, presetContactId, presetTitle }: DealFormProps) {
   const router = useRouter();
   const [contactsList, setContacts] = useState<Array<{ id: string; name: string }>>([]);
   const [stagesList, setStages] = useState<Array<{ id: string; name: string }>>([]);
-
-  useEffect(() => {
-    if (open) {
-      fetch("/api/contacts").then((r) => r.json()).then(setContacts);
-      fetch("/api/pipeline").then((r) => r.json()).then(setStages);
-    }
-  }, [open]);
+  const isEdit = Boolean(initialData?.id);
 
   const {
     register,
@@ -73,26 +81,58 @@ export function DealForm({ open, onClose }: DealFormProps) {
     },
   });
 
+  useEffect(() => {
+    if (open) {
+      fetch("/api/contacts").then((r) => r.json()).then(setContacts);
+      fetch("/api/pipeline").then((r) => r.json()).then(setStages);
+      if (initialData) {
+        reset({
+          title: initialData.title,
+          value: (initialData.value / 100).toString(),
+          contactId: initialData.contactId,
+          stageId: initialData.stageId,
+          probability: initialData.probability.toString(),
+          expectedClose: initialData.expectedClose,
+          notes: initialData.notes,
+        });
+      } else if (presetContactId) {
+        reset({
+          title: presetTitle || "",
+          value: "",
+          contactId: presetContactId,
+          stageId: "",
+          probability: "50",
+          expectedClose: "",
+          notes: "",
+        });
+      }
+    }
+  }, [open, initialData, reset]);
+
   const onSubmit = async (data: DealFormData) => {
     try {
-      const res = await fetch("/api/deals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          value: Math.round(parseFloat(data.value || "0") * 100),
-          probability: parseInt(data.probability || "0"),
-        }),
-      });
+      const payload = {
+        ...data,
+        value: Math.round(parseFloat(data.value || "0") * 100),
+        probability: parseInt(data.probability || "0"),
+      };
+      const res = await fetch(
+        isEdit ? `/api/deals/${initialData!.id}` : "/api/deals",
+        {
+          method: isEdit ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
 
-      if (!res.ok) throw new Error("Error al crear deal");
+      if (!res.ok) throw new Error("Error al guardar deal");
 
-      toast.success("Deal creado exitosamente");
-      reset();
+      toast.success(isEdit ? "Deal actualizado" : "Deal creado exitosamente");
+      if (!isEdit) reset();
       onClose();
       router.refresh();
     } catch {
-      toast.error("Error al crear el deal");
+      toast.error("Error al guardar el deal");
     }
   };
 
@@ -100,7 +140,7 @@ export function DealForm({ open, onClose }: DealFormProps) {
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Nuevo Deal</DialogTitle>
+          <DialogTitle>{isEdit ? "Editar Deal" : "Nuevo Deal"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -191,7 +231,7 @@ export function DealForm({ open, onClose }: DealFormProps) {
               Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting} className="cursor-pointer">
-              {isSubmitting ? "Creando..." : "Crear Deal"}
+              {isSubmitting ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear Deal"}
             </Button>
           </div>
         </form>

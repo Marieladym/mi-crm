@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ContactForm } from "./ContactForm";
 import { ActivityForm } from "@/components/activities/ActivityForm";
+import { DealForm } from "@/components/deals/DealForm";
 import {
   ArrowLeft,
   Mail,
@@ -110,6 +111,7 @@ export function ContactDetailClient({
   const router = useRouter();
   const [showEditForm, setShowEditForm] = useState(false);
   const [showActivityForm, setShowActivityForm] = useState(false);
+  const [showDealForm, setShowDealForm] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const handleCopy = async (value: string, field: string) => {
@@ -301,10 +303,19 @@ export function ContactDetailClient({
 
         {/* Deals */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">
               Deals ({deals.length})
             </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDealForm(true)}
+              className="cursor-pointer"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Crear
+            </Button>
           </CardHeader>
           <CardContent>
             {deals.length === 0 ? (
@@ -425,6 +436,16 @@ export function ContactDetailClient({
           router.refresh();
         }}
         preselectedContactId={contact.id}
+      />
+
+      <DealForm
+        open={showDealForm}
+        onClose={() => {
+          setShowDealForm(false);
+          router.refresh();
+        }}
+        presetContactId={contact.id}
+        presetTitle={`Oportunidad - ${contact.name}`}
       />
     </div>
   );

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar, DollarSign, Percent, FileText } from "lucide-react";
 import { formatCurrency, formatDate, formatRelativeDate } from "@/lib/constants";
 import { ACTIVITY_TYPE_CONFIG } from "@/lib/constants";
+import { asc } from "drizzle-orm";
+import { DealManager } from "@/components/deals/DealManager";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,12 @@ export default async function DealDetailPage({
     .from(activities)
     .where(eq(activities.dealId, id))
     .orderBy(desc(activities.createdAt))
+    .all();
+
+  const allStages = db
+    .select()
+    .from(pipelineStages)
+    .orderBy(asc(pipelineStages.order))
     .all();
 
   return (
@@ -116,6 +124,20 @@ export default async function DealDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      <DealManager
+        deal={{
+          id: deal.id,
+          title: deal.title,
+          value: deal.value,
+          stageId: deal.stageId,
+          contactId: deal.contactId,
+          probability: deal.probability,
+          expectedClose: deal.expectedClose,
+          notes: deal.notes,
+        }}
+        stages={allStages}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {deal.notes && (
