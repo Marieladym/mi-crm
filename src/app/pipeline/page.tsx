@@ -1,86 +1,19 @@
 import { db } from "@/db";
-import { pipelineStages, deals, contacts, pipelines } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
-import { KanbanBoard } from "@/components/pipeline/KanbanBoard";
-import { PipelineSwitcher } from "@/components/pipeline/PipelineSwitcher";
-import type { PipelineColumn } from "@/types";
+import { pipelines } from "@/db/schema";
+import { asc } from "drizzle-orm";
+import { PipelineExplorer } from "@/components/pipeline/PipelineExplorer";
 
 export const dynamic = "force-dynamic";
 
-export default async function PipelinePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ pipeline?: string }>;
-}) {
-  const { pipeline: pipelineParam } = await searchParams;
-
+export default function PipelinePage() {
   const allPipelines = db
     .select()
     .from(pipelines)
     .orderBy(asc(pipelines.createdAt))
     .all();
 
-  // Pipeline seleccionado: el del parámetro, o el por defecto, o el primero
-  const selected =
-    allPipelines.find((p) => p.id === pipelineParam) ||
-    allPipelines.find((p) => p.isDefault) ||
-    allPipelines[0];
-
-  const stages = db
-    .select()
-    .from(pipelineStages)
-    .orderBy(asc(pipelineStages.order))
-    .all()
-    .filter((s) => !selected || s.pipelineId === selected.id);
-
-  const allStages = db.select().from(pipelineStages).all();
-
-  const allDeals = db
-    .select({
-      id: deals.id,
-      title: deals.title,
-      value: deals.value,
-      stageId: deals.stageId,
-      contactId: deals.contactId,
-      expectedClose: deals.expectedClose,
-      probability: deals.probability,
-      notes: deals.notes,
-      createdAt: deals.createdAt,
-      updatedAt: deals.updatedAt,
-      contactName: contacts.name,
-      contactTemperature: contacts.temperature,
-    })
-    .from(deals)
-    .leftJoin(contacts, eq(deals.contactId, contacts.id))
-    .all();
-
-  // Contar deals por pipeline (vía la etapa a la que pertenecen)
-  const stageToPipeline = new Map(allStages.map((s) => [s.id, s.pipelineId]));
-  const dealCounts: Record<string, number> = {};
-  for (const d of allDeals) {
-    const pid = stageToPipeline.get(d.stageId);
-    if (pid) dealCounts[pid] = (dealCounts[pid] || 0) + 1;
-  }
-
-  const columns: PipelineColumn[] = stages.map((stage) => ({
-    ...stage,
-    deals: allDeals
-      .filter((d) => d.stageId === stage.id)
-      .map((d) => ({
-        id: d.id,
-        title: d.title,
-        value: d.value,
-        stageId: d.stageId,
-        contactId: d.contactId,
-        expectedClose: d.expectedClose,
-        probability: d.probability,
-        notes: d.notes,
-        createdAt: d.createdAt,
-        updatedAt: d.updatedAt,
-        contactName: d.contactName,
-        contactTemperature: d.contactTemperature,
-      })) as PipelineColumn["deals"],
-  }));
+  const defaultId =
+    allPipelines.find((p) => p.isDefault)?.id || allPipelines[0]?.id || null;
 
   return (
     <div className="space-y-6">
@@ -91,22 +24,10 @@ export default async function PipelinePage({
         </p>
       </div>
 
-      <PipelineSwitcher
-        pipelines={allPipelines.map((p) => ({
-          id: p.id,
-          name: p.name,
-          count: dealCounts[p.id] || 0,
-        }))}
-        selectedId={selected?.id ?? null}
+      <PipelineExplorer
+        pipelines={allPipelines.map((p) => ({ id: p.id, name: p.name }))}
+        defaultId={defaultId}
       />
-
-      {columns.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Este pipeline no tiene etapas. Agrégalas en Personalizar.
-        </p>
-      ) : (
-        <KanbanBoard key={selected?.id ?? "all"} initialColumns={columns} />
-      )}
     </div>
   );
 }
