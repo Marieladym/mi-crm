@@ -181,7 +181,12 @@ export function DealForm({ open, onClose, initialData, presetContactId, presetTi
               onValueChange={(v) => v && setValue("contactId", v)}
             >
               <SelectTrigger className="cursor-pointer">
-                <SelectValue placeholder="Seleccionar contacto" />
+                <SelectValue placeholder="Seleccionar contacto">
+                  {(value: string) =>
+                    contactsList.find((c) => c.id === value)?.name ??
+                    "Seleccionar contacto"
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {contactsList.map((c) => (
@@ -204,7 +209,12 @@ export function DealForm({ open, onClose, initialData, presetContactId, presetTi
                 onValueChange={(v) => v && setValue("stageId", v)}
               >
                 <SelectTrigger className="cursor-pointer">
-                  <SelectValue placeholder="Primera etapa" />
+                  <SelectValue placeholder="Primera etapa">
+                    {(value: string) =>
+                      stagesList.find((s) => s.id === value)?.name ??
+                      "Primera etapa"
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {stagesList.map((s) => (

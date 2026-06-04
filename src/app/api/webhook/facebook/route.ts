@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { contacts, activities, crmSettings } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { contacts, activities, crmSettings, deals, pipelineStages } from "@/db/schema";
+import { eq, asc } from "drizzle-orm";
 
 // GET: Facebook verifica que el webhook es tuyo
 export async function GET(request: NextRequest) {
@@ -193,7 +193,49 @@ export async function POST(request: NextRequest) {
       })
       .run();
 
-    return NextResponse.json({ success: true, contactId: contact.id }, { status: 201 });
+    // Crear automáticamente un deal en la etapa "Prospecto" (o la primera)
+    let dealId: string | null = null;
+    const allStages = db
+      .select()
+      .from(pipelineStages)
+      .orderBy(asc(pipelineStages.order))
+      .all();
+    const prospectStage =
+      allStages.find((s) => /prospecto/i.test(s.name)) || allStages[0];
+
+    if (prospectStage) {
+      const deal = db
+        .insert(deals)
+        .values({
+          title: `Oportunidad - ${fields.name}`,
+          value: 0,
+          stageId: prospectStage.id,
+          contactId: contact.id,
+          probability: 20,
+          notes: `Creado automáticamente desde Facebook Instant Form`,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning()
+        .get();
+      dealId = deal.id;
+
+      db.insert(activities)
+        .values({
+          type: "follow_up",
+          description: `Nuevo prospecto: dar seguimiento a ${fields.name}`,
+          contactId: contact.id,
+          dealId: deal.id,
+          scheduledAt: now,
+          createdAt: now,
+        })
+        .run();
+    }
+
+    return NextResponse.json(
+      { success: true, contactId: contact.id, dealId },
+      { status: 201 }
+    );
   } catch (error) {
     return NextResponse.json(
       { error: `Error interno: ${error instanceof Error ? error.message : "Unknown"}` },
