@@ -21,6 +21,18 @@
 
 ---
 
+## 🚀 ¿Vas a instalarlo? Empieza aquí
+
+> **[📖 GUIA-INSTALACION.md](./GUIA-INSTALACION.md)** — Paso a paso completo:
+> correr el CRM, desplegarlo en Railway (siempre en vivo), conectar **Facebook
+> Lead Ads** (Meta API) y personalizar tu marca y negocio.
+
+> 💡 **Recomendado:** abre este proyecto con **Claude Code** y escribe
+> *"guíame paso a paso para instalar el CRM"*. Claude te acompaña en todo:
+> conexión con Meta, despliegue en Railway y configuración de tu negocio.
+
+---
+
 # Espanol
 
 ## Que es Auto-CRM?
