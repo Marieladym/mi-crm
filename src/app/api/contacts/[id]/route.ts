@@ -107,6 +107,9 @@ export async function DELETE(
     );
   }
 
+  // Borrar registros relacionados primero (evita error de clave foránea)
+  db.delete(activities).where(eq(activities.contactId, id)).run();
+  db.delete(deals).where(eq(deals.contactId, id)).run();
   db.delete(contacts).where(eq(contacts.id, id)).run();
   return NextResponse.json({ success: true });
 }
