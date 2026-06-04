@@ -25,14 +25,19 @@ const navItems = [
   { href: "/settings", label: "Configuracion", icon: Settings },
 ];
 
-export function Sidebar() {
+export function Sidebar({ name = "Auto-CRM", logo = "" }: { name?: string; logo?: string }) {
   const pathname = usePathname();
 
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col bg-[var(--sidebar)] text-[var(--sidebar-foreground)] min-h-screen">
       <div className="flex h-16 items-center gap-2 px-6 border-b border-[var(--sidebar-border)]">
-        <Briefcase className="h-6 w-6 text-[var(--sidebar-primary)]" />
-        <span className="text-lg font-bold tracking-tight">Auto-CRM</span>
+        {logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logo} alt={name} className="h-8 w-8 rounded object-contain shrink-0" />
+        ) : (
+          <Briefcase className="h-6 w-6 text-[var(--sidebar-primary)]" />
+        )}
+        <span className="text-lg font-bold tracking-tight truncate">{name}</span>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">

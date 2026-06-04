@@ -17,16 +17,16 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-function getCurrency(): string {
+function getSetting(key: string): string {
   try {
     const row = db
       .select()
       .from(crmSettings)
-      .where(eq(crmSettings.key, "currency"))
+      .where(eq(crmSettings.key, key))
       .get();
-    return row?.value || "MXN";
+    return row?.value || "";
   } catch {
-    return "MXN";
+    return "";
   }
 }
 
@@ -41,14 +41,16 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const currency = getCurrency();
+  const currency = getSetting("currency") || "MXN";
   setActiveCurrency(currency);
+  const crmName = getSetting("crm_name") || "Auto-CRM";
+  const crmLogo = getSetting("crm_logo");
   return (
     <html lang="es" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex" suppressHydrationWarning>
         <CurrencyInit currency={currency} />
         <TooltipProvider>
-          <Sidebar />
+          <Sidebar name={crmName} logo={crmLogo} />
           <div className="flex-1 flex flex-col min-h-screen">
             <Header />
             <main className="flex-1 p-4 md:p-6 bg-background overflow-auto">

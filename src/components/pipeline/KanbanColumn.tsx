@@ -22,9 +22,10 @@ interface KanbanColumnProps {
   name: string;
   color: string;
   deals: Deal[];
+  onOpenDeal?: (id: string) => void;
 }
 
-export function KanbanColumn({ id, name, color, deals }: KanbanColumnProps) {
+export function KanbanColumn({ id, name, color, deals, onOpenDeal }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
   const totalValue = deals.reduce((sum, d) => sum + d.value, 0);
@@ -57,7 +58,7 @@ export function KanbanColumn({ id, name, color, deals }: KanbanColumnProps) {
       >
         <div className="flex-1 p-2 space-y-2 min-h-[100px] overflow-y-auto">
           {deals.map((deal) => (
-            <DealCard key={deal.id} {...deal} />
+            <DealCard key={deal.id} {...deal} onOpen={onOpenDeal} />
           ))}
         </div>
       </SortableContext>

@@ -14,6 +14,7 @@ import {
 } from "@dnd-kit/core";
 import { KanbanColumn } from "./KanbanColumn";
 import { DealCard } from "./DealCard";
+import { DealModal } from "@/components/deals/DealModal";
 import { toast } from "sonner";
 import type { PipelineColumn } from "@/types";
 
@@ -24,6 +25,7 @@ interface KanbanBoardProps {
 export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
   const [columns, setColumns] = useState(initialColumns);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [openDealId, setOpenDealId] = useState<string | null>(null);
   const columnsSnapshot = useRef<PipelineColumn[]>(initialColumns);
 
   const sensors = useSensors(
@@ -134,6 +136,7 @@ export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
             id={column.id}
             name={column.name}
             color={column.color}
+            onOpenDeal={setOpenDealId}
             deals={column.deals.map((d) => ({
               id: d.id,
               title: d.title,
@@ -147,6 +150,12 @@ export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
           />
         ))}
       </div>
+
+      <DealModal
+        dealId={openDealId}
+        open={openDealId !== null}
+        onClose={() => setOpenDealId(null)}
+      />
 
       <DragOverlay>
         {activeDeal ? (

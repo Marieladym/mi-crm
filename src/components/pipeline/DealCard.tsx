@@ -5,7 +5,6 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatCurrency } from "@/lib/constants";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useRouter } from "next/navigation";
 import { Maximize2 } from "lucide-react";
 import type { Temperature } from "@/types";
 
@@ -16,6 +15,7 @@ interface DealCardProps {
   contactName: string | null;
   contactTemperature: string | null;
   probability: number;
+  onOpen?: (id: string) => void;
 }
 
 export function DealCard({
@@ -25,6 +25,7 @@ export function DealCard({
   contactName,
   contactTemperature,
   probability,
+  onOpen,
 }: DealCardProps) {
   const {
     attributes,
@@ -34,8 +35,6 @@ export function DealCard({
     transition,
     isDragging,
   } = useSortable({ id });
-
-  const router = useRouter();
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -58,7 +57,7 @@ export function DealCard({
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
-              router.push(`/deals/${id}`);
+              onOpen?.(id);
             }}
             className="shrink-0 p-1 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
             title="Abrir deal"

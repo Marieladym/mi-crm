@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Briefcase, Tag, Plus, X } from "lucide-react";
+import { Briefcase, Tag, Plus, X, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
 const BUSINESS_TYPES = [
@@ -38,13 +38,51 @@ export function BusinessConfig() {
   const [config, setConfig] = useState<Config | null>(null);
   const [newSource, setNewSource] = useState("");
   const [saving, setSaving] = useState(false);
+  const [crmName, setCrmName] = useState("Auto-CRM");
+  const [crmLogo, setCrmLogo] = useState("");
 
   useEffect(() => {
     fetch("/api/config")
       .then((r) => r.json())
       .then(setConfig)
       .catch(() => {});
+    fetch("/api/branding")
+      .then((r) => r.json())
+      .then((d) => {
+        setCrmName(d.name || "Auto-CRM");
+        setCrmLogo(d.logo || "");
+      })
+      .catch(() => {});
   }, []);
+
+  const saveBranding = async (patch: { name?: string; logo?: string }) => {
+    try {
+      const res = await fetch("/api/branding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success("Identidad actualizada (recarga para verla en el menú)");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al guardar");
+    }
+  };
+
+  const onLogoFile = (file: File) => {
+    if (file.size > 500_000) {
+      toast.error("El logo debe pesar menos de 500KB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setCrmLogo(dataUrl);
+      saveBranding({ logo: dataUrl });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const save = async (patch: Partial<Config>) => {
     if (!config) return;
@@ -81,6 +119,59 @@ export function BusinessConfig() {
 
   return (
     <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ImageIcon className="h-4 w-4" />
+            Identidad del CRM
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 rounded-lg border flex items-center justify-center overflow-hidden bg-muted/30 shrink-0">
+              {crmLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={crmLogo} alt="Logo" className="h-full w-full object-contain" />
+              ) : (
+                <ImageIcon className="h-6 w-6 text-muted-foreground" />
+              )}
+            </div>
+            <div className="flex-1 space-y-2">
+              <label className="text-sm font-medium">Nombre del CRM</label>
+              <Input
+                value={crmName}
+                placeholder="Ej: CRM Oriam"
+                onChange={(e) => setCrmName(e.target.value)}
+                onBlur={(e) => saveBranding({ name: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm cursor-pointer hover:bg-muted">
+              <ImageIcon className="h-4 w-4" /> Subir logo
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && onLogoFile(e.target.files[0])}
+              />
+            </label>
+            {crmLogo && (
+              <button
+                onClick={() => {
+                  setCrmLogo("");
+                  saveBranding({ logo: "" });
+                }}
+                className="text-sm text-destructive cursor-pointer hover:underline"
+              >
+                Quitar logo
+              </button>
+            )}
+            <span className="text-xs text-muted-foreground">PNG/JPG/SVG, máx 500KB</span>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
