@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -41,9 +42,38 @@ interface ContactFormProps {
   initialData?: Partial<ContactFormData> & { id?: string };
 }
 
+const SOURCE_LABELS_LOCAL: Record<string, string> = {
+  website: "Sitio web",
+  whatsapp: "WhatsApp",
+  referido: "Referido",
+  redes_sociales: "Redes sociales",
+  llamada_fria: "Llamada fría",
+  email: "Email",
+  formulario: "Formulario",
+  facebook_lead: "Facebook Lead",
+  evento: "Evento",
+  import: "Importado",
+  webhook: "Webhook",
+  otro: "Otro",
+};
+
+const prettySource = (s: string) =>
+  SOURCE_LABELS_LOCAL[s] ||
+  s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+
 export function ContactForm({ open, onClose, initialData }: ContactFormProps) {
   const router = useRouter();
   const isEditing = !!initialData?.id;
+  const [sources, setSources] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      fetch("/api/config")
+        .then((r) => r.json())
+        .then((d) => setSources(d.leadSources || []))
+        .catch(() => {});
+    }
+  }, [open]);
 
   const {
     register,
@@ -133,20 +163,19 @@ export function ContactForm({ open, onClose, initialData }: ContactFormProps) {
                 onValueChange={(v) => v && setValue("source", v)}
               >
                 <SelectTrigger className="cursor-pointer">
-                  <SelectValue />
+                  <SelectValue>
+                    {(value: string) => prettySource(value)}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="website">Sitio web</SelectItem>
-                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                  <SelectItem value="referido">Referido</SelectItem>
-                  <SelectItem value="redes_sociales">Redes sociales</SelectItem>
-                  <SelectItem value="llamada_fria">Llamada fria</SelectItem>
-                  <SelectItem value="email">Email</SelectItem>
-                  <SelectItem value="formulario">Formulario</SelectItem>
-                  <SelectItem value="evento">Evento</SelectItem>
-                  <SelectItem value="import">Importado</SelectItem>
-                  <SelectItem value="webhook">Webhook</SelectItem>
-                  <SelectItem value="otro">Otro</SelectItem>
+                  {(sources.length > 0
+                    ? sources
+                    : ["website", "whatsapp", "referido", "otro"]
+                  ).map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {prettySource(s)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
